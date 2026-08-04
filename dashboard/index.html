@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Workflow Automation Platform — Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🧩 AI Workflow Automation Platform</h1>
+    <div id="health-badge" class="badge badge-unknown">Checking...</div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Run a Multi-Agent Workflow</h2>
+      <form id="run-form">
+        <label for="topic">Topic / Task</label>
+        <input id="topic" type="text" placeholder="e.g. Impact of local LLMs on enterprise AI" required />
+
+        <label for="max_revisions">Max revision loops</label>
+        <input id="max_revisions" type="number" value="2" min="0" max="5" />
+
+        <button type="submit" id="run-btn">▶ Run Workflow</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Agent Pipeline</h2>
+      <div class="pipeline">
+        <div class="stage" id="stage-researcher">🔎 Researcher</div>
+        <div class="arrow">→</div>
+        <div class="stage" id="stage-writer">✍️ Writer</div>
+        <div class="arrow">→</div>
+        <div class="stage" id="stage-reviewer">🧐 Reviewer</div>
+        <div class="arrow">→</div>
+        <div class="stage" id="stage-coordinator">✅ Coordinator</div>
+      </div>
+    </section>
+
+    <section class="card" id="result-card" style="display:none;">
+      <h2>Result</h2>
+      <div class="result-grid">
+        <div>
+          <h3>Research Notes</h3>
+          <pre id="out-research"></pre>
+        </div>
+        <div>
+          <h3>Draft</h3>
+          <pre id="out-draft"></pre>
+        </div>
+        <div>
+          <h3>Review Feedback</h3>
+          <pre id="out-feedback"></pre>
+        </div>
+        <div>
+          <h3>Final Output</h3>
+          <pre id="out-final"></pre>
+        </div>
+      </div>
+      <p class="meta" id="out-meta"></p>
+    </section>
+
+    <section class="card">
+      <h2>Recent Runs</h2>
+      <table id="runs-table">
+        <thead><tr><th>Run ID</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button id="refresh-runs">↻ Refresh</button>
+    </section>
+
+    <section class="card">
+      <h2>Automation</h2>
+      <button id="trigger-daily">⏰ Trigger daily task now</button>
+      <span id="daily-msg"></span>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

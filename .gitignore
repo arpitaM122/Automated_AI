@@ -1,0 +1,78 @@
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Environment Variables
+.env
+.env.*
+
+# Python Build
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Cache
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# VS Code
+.vscode/
+
+# JetBrains
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# SQLite
+*.sqlite3
+*.db
+
+# Coverage
+.coverage
+htmlcov/
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+
+# Docker
+docker-compose.override.yml
+
+# Ollama Models (if stored locally)
+ollama/
+
+# Node Modules (if React frontend)
+node_modules/
+
+# Generated Files
+output/
+outputs/
+temp/
+tmp/
+
+# Secrets
+*.pem
+*.key
+*.crt
+
+# Python Version
+.python-version
