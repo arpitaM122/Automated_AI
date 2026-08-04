@@ -1,0 +1,728 @@
+# **AI Workflow Automation Platform - Complete README**
+
+A local-first, multi-agent AI workflow automation platform built with **FastAPI**, **Ollama**, and pure Python orchestration. It lets you design multi-agent pipelines (Researcher → Writer → Reviewer → Coordinator), expose them over a REST API, run them on local open-source LLMs (no cloud API keys needed), schedule recurring/daily automations, and monitor everything from a lightweight web dashboard.
+
+## **Features**
+
+- ✅ **Multi-Agent Workflow Task Automation** — Pure Python orchestration coordinating specialized agents
+- ✅ **FastAPI Backend** — REST API to trigger, monitor, and manage workflows
+- ✅ **Local LLM Support** — Runs entirely on Ollama (mistral, neural-chat, smollm2, etc.) — no external API keys
+- ✅ **Simplified Tool Integration** — Local tool calls (web_search, save_note, read_notes) built-in
+- ✅ **Workflow Dashboard** — Simple HTML/JS dashboard to trigger runs and visualize agent progress
+- ✅ **Daily Task Automation** — APScheduler-based cron jobs for recurring workflows
+- ✅ **Docker Deployment** — One-command local deployment
+- ✅ **100% Offline** — Everything runs locally, no internet required for core functionality
+
+## **Project Structure**
+
+```
+ai-workflow-platform/
+├── README.md
+├── requirements.txt
+├── .env                           # Configuration (auto-created)
+├── .env.example
+├── app/
+│   ├── main.py                    # FastAPI app entrypoint
+│   ├── config.py                  # Settings / env config
+│   ├── models/
+│   │   └── schemas.py             # Pydantic request/response models
+│   ├── agents/
+│   │   ├── base_agent.py          # Abstract base agent
+│   │   ├── researcher_agent.py    # Research agent
+│   │   ├── writer_agent.py        # Writing agent
+│   │   ├── reviewer_agent.py      # QA / review agent
+│   │   └── coordinator.py         # Orchestrates agent handoffs
+│   ├── workflows/
+│   │   ├── state.py               # Workflow state schema
+│   │   └── graph_builder.py       # Pure Python workflow engine
+│   ├── mcp/
+│   │   ├── mcp_server.py          # Tool definitions (reference)
+│   │   └── mcp_client.py          # Simplified tool caller
+│   ├── llm/
+│   │   └── ollama_client.py       # Local Ollama LLM wrapper
+│   ├── automation/
+│   │   ├── scheduler.py           # APScheduler setup
+│   │   └── daily_tasks.py         # Daily automated jobs
+│   ├── api/
+│   │   └── routes.py              # API route definitions
+│   └── utils/
+│       └── logger.py              # Structured logging
+├── dashboard/
+│   ├── index.html                 # Dashboard UI
+│   ├── style.css                  # Dashboard styling
+│   └── app.js                     # Dashboard logic
+├── scripts/
+│   ├── setup_ollama.sh            # Pull/start Ollama models
+│   ├── run_server.sh              # Run FastAPI locally
+│   └── deploy.sh                  # Docker deploy helper
+├── docker/
+│   ├── Dockerfile
+│   └── docker-compose.yml
+└── tests/
+    └── test_workflow.py           # Unit tests (mocked)
+```
+
+## **Quick Start**
+
+### **1. Extract & Setup (5 minutes)**
+
+```powershell
+# Extract zip and navigate
+Expand-Archive -Path ai-workflow-automation-platform.zip -DestinationPath .
+cd ai-workflow-platform
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\Activate.ps1
+
+# Upgrade pip
+python -m pip install --upgrade pip
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+@"
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral
+OLLAMA_TEMPERATURE=0.4
+MCP_SERVER_HOST=localhost
+MCP_SERVER_PORT=8765
+APP_HOST=0.0.0.0
+APP_PORT=8000
+APP_ENV=development
+DAILY_TASK_HOUR=8
+DAILY_TASK_MINUTE=0
+DAILY_TASK_TOPIC=Latest developments in local-first AI tooling
+LOG_LEVEL=INFO
+"@ | Out-File -Encoding UTF8 .env
+```
+
+### **2. Install Ollama (5 minutes)**
+
+**Download from:** https://ollama.com
+
+Or use Chocolatey:
+```powershell
+choco install ollama
+```
+
+### **3. Pull a Model (10-15 minutes)**
+
+```powershell
+# Pull mistral (recommended - 26.7 MB, fast)
+ollama pull mistral
+
+# Or alternatives:
+ollama pull neural-chat    # Fast, lightweight
+ollama pull smollm2        # Very small (~270 MB)
+ollama pull llama2         # Larger, better quality
+```
+
+### **4. Start Services (3 separate PowerShell windows)**
+
+**Window 1: Ollama Server**
+```powershell
+ollama serve
+```
+**Keep running!** Output: `Listening on 127.0.0.1:11434`
+
+---
+
+**Window 2: FastAPI Backend**
+```powershell
+cd ai-workflow-platform
+venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
+```
+**Keep running!** Output: `Uvicorn running on http://0.0.0.0:8000`
+
+---
+
+**Window 3: Browser & Testing**
+```powershell
+# Open dashboard
+Start-Process "http://localhost:8000/dashboard"
+
+# Or test via API
+curl http://localhost:8000/api/health
+```
+
+### **5. Run Your First Workflow**
+
+**In the dashboard** (`http://localhost:8000/dashboard`):
+
+1. Enter topic: `"Impact of local LLMs on enterprise AI adoption"`
+2. Max revisions: `2`
+3. Click: `▶ Run Workflow`
+
+**Watch it process (30-60 seconds):**
+```
+🔎 Researcher (gathers info)
+✍️ Writer (drafts content)
+🧐 Reviewer (QA, may request revision)
+✅ Coordinator (finalizes result)
+```
+
+**See results:**
+- Research Notes
+- Draft
+- Review Feedback (if any)
+- Final Output
+
+---
+
+## **How the Multi-Agent Workflow Works**
+
+```
+START
+  ↓
+🔎 RESEARCHER
+  │ - Gathers information via local tools
+  │ - Uses LLM to synthesize research notes
+  ↓
+✍️ WRITER
+  │ - Reads research notes
+  │ - Drafts content (3-5 paragraphs)
+  ↓
+🧐 REVIEWER
+  │ - Critiques the draft
+  │ - Either: APPROVED → proceed OR REVISE → loop back
+  │
+  ├─→ APPROVED? → ✅ COORDINATOR (finalize & save)
+  │
+  └─→ REVISE? → ✍️ WRITER (revise draft)
+      │ (max 2 loops by default)
+      ↓
+      🧐 REVIEWER (review again)
+      ↓
+      [Loop or approve]
+  ↓
+✅ COORDINATOR
+  │ - Finalizes output
+  │ - Saves result via local tools
+  ↓
+END
+```
+
+**Key Points:**
+- Pure Python orchestration (no external graph libraries)
+- State passed between agents as dict
+- Conditional routing (approve/revise loop)
+- Budget-bounded revisions (max_revisions config)
+- All agents use same local LLM
+
+---
+
+## **Configuration (.env)**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `mistral` | Model to use (mistral, neural-chat, llama2, etc.) |
+| `OLLAMA_TEMPERATURE` | `0.4` | LLM creativity (0-1, lower = more focused) |
+| `MCP_SERVER_HOST` | `localhost` | Tool server host |
+| `MCP_SERVER_PORT` | `8765` | Tool server port |
+| `APP_HOST` | `0.0.0.0` | FastAPI host |
+| `APP_PORT` | `8000` | FastAPI port |
+| `APP_ENV` | `development` | Environment (development/production) |
+| `DAILY_TASK_HOUR` | `8` | Daily task hour (24-hour format) |
+| `DAILY_TASK_MINUTE` | `0` | Daily task minute |
+| `DAILY_TASK_TOPIC` | `...` | Default topic for daily automation |
+| `LOG_LEVEL` | `INFO` | Logging level (DEBUG/INFO/WARNING/ERROR) |
+
+---
+
+## **API Endpoints**
+
+### **Health Check**
+```bash
+GET /api/health
+```
+**Response:**
+```json
+{
+  "status": "ok",
+  "ollama_reachable": true,
+  "ollama_model": "mistral",
+  "mcp_reachable": true
+}
+```
+
+### **Run Workflow**
+```bash
+POST /api/workflow/run
+Content-Type: application/json
+
+{
+  "topic": "Your topic here",
+  "max_revisions": 2
+}
+```
+**Response:**
+```json
+{
+  "run_id": "abc123...",
+  "status": "completed",
+  "topic": "Your topic here",
+  "research_notes": "...",
+  "draft": "...",
+  "review_feedback": null,
+  "revision_count": 0,
+  "final_output": "...",
+  "started_at": "2026-08-04T23:30:00",
+  "finished_at": "2026-08-04T23:31:30"
+}
+```
+
+### **Get Workflow Result**
+```bash
+GET /api/workflow/{run_id}
+```
+**Response:** Same as above
+
+### **List All Workflows**
+```bash
+GET /api/workflow
+```
+**Response:**
+```json
+[
+  {"run_id": "abc123...", "status": "completed"},
+  {"run_id": "def456...", "status": "completed"},
+  ...
+]
+```
+
+### **Trigger Daily Task Manually**
+```bash
+POST /api/automation/run-daily-now
+```
+**Response:**
+```json
+{"message": "Daily task triggered in background."}
+```
+
+### **Call Tool Directly**
+```bash
+POST /api/mcp/tool/{tool_name}
+Content-Type: application/json
+
+{
+  "query": "search term"  // for web_search
+  // or
+  "key": "note_key",       // for save_note
+  "content": "..."
+}
+```
+
+---
+
+## **Testing**
+
+### **Run Unit Tests**
+```powershell
+pytest tests/test_workflow.py -v
+```
+
+**Output:**
+```
+tests/test_workflow.py::test_workflow_state_shape PASSED ✅
+tests/test_workflow.py::test_researcher_agent_run PASSED ✅
+tests/test_workflow.py::test_writer_agent_initial_draft PASSED ✅
+tests/test_workflow.py::test_reviewer_agent_approves PASSED ✅
+tests/test_workflow.py::test_reviewer_agent_requests_revision PASSED ✅
+tests/test_workflow.py::test_workflow_execution PASSED ✅
+
+========== 6 passed ==========
+```
+
+### **Test via cURL**
+
+```powershell
+# Health check
+curl http://localhost:8000/api/health
+
+# Run workflow
+curl -X POST http://localhost:8000/api/workflow/run `
+  -H "Content-Type: application/json" `
+  -d '{"topic": "Benefits of local AI", "max_revisions": 2}'
+
+# List runs
+curl http://localhost:8000/api/workflow
+
+# Trigger daily task
+curl -X POST http://localhost:8000/api/automation/run-daily-now
+
+# Check specific run
+curl http://localhost:8000/api/workflow/abc123...
+```
+
+---
+
+## **Model Options**
+
+Recommended models (ordered by speed → quality):
+
+| Model | Size | Speed | Quality | Command |
+|-------|------|-------|---------|---------|
+| `neural-chat` | ~7.4 GB | ⚡ Fast | Good | `ollama pull neural-chat` |
+| `mistral` | ~26.7 MB | ⚡⚡ Very Fast | Good | `ollama pull mistral` |
+| `llama2` | ~3.8 GB | ⚡ Fast | Better | `ollama pull llama2` |
+| `llama2-uncensored` | ~3.8 GB | ⚡ Fast | Better | `ollama pull llama2-uncensored` |
+| `smollm2:135m` | ~270 MB | ⚡⚡⚡ Fastest | Poor | `ollama pull smollm2:135m` |
+
+**Recommended: `mistral`** - Best balance of speed and quality
+
+---
+
+## **Troubleshooting**
+
+### **"404 Not Found" for `/api/generate`**
+**Problem:** Model name in `.env` doesn't match installed model
+```powershell
+# Check installed models
+ollama list
+
+# Update .env with correct model name
+notepad .env
+# Change OLLAMA_MODEL=mistral (or whatever you have)
+
+# Restart FastAPI
+```
+
+### **Workflow takes very long or hangs**
+**Problem:** Model is too small or slow
+```powershell
+# Pull a better model
+ollama pull mistral
+
+# Update .env
+notepad .env
+# OLLAMA_MODEL=mistral
+
+# Restart services
+```
+
+### **Dashboard shows "Backend unreachable"**
+**Problem:** FastAPI not running
+```powershell
+# Make sure Window 2 is running:
+# venv\Scripts\Activate.ps1
+# uvicorn app.main:app --reload --port 8000
+
+# Refresh browser: Ctrl+Shift+R
+```
+
+### **Port 8000 already in use**
+**Problem:** Another app using port 8000
+```powershell
+# Use different port
+uvicorn app.main:app --reload --port 8001
+
+# Access at http://localhost:8001/dashboard
+```
+
+### **"ModuleNotFoundError" errors**
+**Problem:** Dependencies not installed
+```powershell
+# Reinstall fresh
+pip install --force-reinstall -r requirements.txt
+
+# Or create fresh venv
+deactivate
+rmdir venv /s
+python -m venv venv
+venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### **Ollama connection refused**
+**Problem:** Ollama server not running
+```powershell
+# Check Window 1 is running: ollama serve
+
+# Or start it
+ollama serve
+```
+
+---
+
+## **Daily Automation**
+
+The platform automatically runs a daily task at configured time (default: 8:00 AM).
+
+### **Change Schedule**
+
+Edit `.env`:
+```
+DAILY_TASK_HOUR=14      # 2 PM
+DAILY_TASK_MINUTE=30    # 30 minutes
+DAILY_TASK_TOPIC=Your custom topic
+```
+
+### **Manually Trigger**
+
+**Via Dashboard:** Click "⏰ Trigger daily task now" button
+
+**Via API:**
+```bash
+curl -X POST http://localhost:8000/api/automation/run-daily-now
+```
+
+**Result:** Workflow runs in background, saves output via local tools.
+
+---
+
+## **Advanced Usage**
+
+### **Modify Agent Behavior**
+
+Edit `app/agents/` files to change:
+- System prompts
+- Personality
+- Logic
+
+Example: `app/agents/writer_agent.py`
+```python
+system_prompt = (
+    "You are a technical writer specializing in AI. "
+    "Write clear, concise, accurate content..."
+)
+```
+
+### **Swap LLM Models**
+
+```powershell
+# Pull new model
+ollama pull llama2
+
+# Update .env
+OLLAMA_MODEL=llama2
+
+# Restart FastAPI
+```
+
+### **Add Custom Tools**
+
+Edit `app/mcp/mcp_client.py`:
+```python
+async def call_mcp_tool(tool_name: str, arguments: dict) -> str:
+    if tool_name == "my_custom_tool":
+        return f"Custom tool result: {arguments}"
+    # ... existing tools
+```
+
+### **Adjust Temperature**
+
+Edit `.env`:
+```
+OLLAMA_TEMPERATURE=0.7  # More creative (0-1 scale)
+```
+
+---
+
+## **Docker Deployment**
+
+If you have Docker installed:
+
+```powershell
+bash scripts/deploy.sh
+```
+
+**Access:**
+- Dashboard: http://localhost:8000/dashboard
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+
+**View logs:**
+```bash
+docker compose -f docker/docker-compose.yml logs -f
+```
+
+**Stop:**
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+---
+
+## **Architecture**
+
+### **Tech Stack**
+- **Framework:** FastAPI (async Python web framework)
+- **LLM:** Ollama (local LLM runtime)
+- **Orchestration:** Pure Python (no external graph library)
+- **Scheduling:** APScheduler (cron jobs)
+- **Frontend:** Vanilla HTML/CSS/JavaScript
+- **Database:** In-memory (dict) - can be swapped for Redis/PostgreSQL
+
+### **Agent Pipeline**
+
+```
+Researcher Agent
+├─ Uses: local tools (web_search)
+├─ Prompts: Ollama LLM
+└─ Output: research_notes (dict)
+
+Writer Agent
+├─ Input: research_notes from Researcher
+├─ Prompts: Ollama LLM
+└─ Output: draft (dict)
+
+Reviewer Agent
+├─ Input: draft from Writer
+├─ Prompts: Ollama LLM
+├─ Logic: Parse "APPROVED" vs "REVISE"
+└─ Output: approved (bool), review_feedback (str)
+
+Coordinator Agent
+├─ Input: final_output from Writer
+├─ Uses: local tools (save_note)
+└─ Output: final_output (dict)
+
+Workflow Engine
+├─ Orchestrates: Researcher → Writer → Reviewer
+├─ Logic: Revision loop (up to max_revisions)
+└─ Result: State dict with all data
+```
+
+---
+
+## **Performance**
+
+Typical workflow execution times (using Mistral):
+
+| Stage | Time | Notes |
+|-------|------|-------|
+| Researcher | 10-15s | LLM inference |
+| Writer (initial) | 15-20s | LLM inference |
+| Reviewer | 10-15s | LLM inference |
+| Coordinator | 2-5s | I/O only |
+| **Total (no revision)** | **40-55s** | Single pass |
+| **Total (1 revision)** | **65-90s** | Writer + Reviewer again |
+
+**Factors affecting speed:**
+- Model size (mistral is fast, llama2 is slower)
+- GPU availability (CPU-only is slower)
+- Topic complexity
+- System load
+
+---
+
+## **Common Use Cases**
+
+### **1. Research & Analysis**
+```
+Topic: "Impact of AI on healthcare"
+→ Researcher gathers facts
+→ Writer synthesizes report
+→ Reviewer QA
+→ Output: Professional analysis
+```
+
+### **2. Content Creation**
+```
+Topic: "Blog post: Local LLMs explained"
+→ Researcher finds key points
+→ Writer drafts article
+→ Reviewer ensures clarity
+→ Output: Ready-to-publish article
+```
+
+### **3. Daily Digest**
+```
+Scheduled daily at 8:00 AM
+→ Topic from .env (DAILY_TASK_TOPIC)
+→ Workflow runs automatically
+→ Result saved via local tools
+→ No manual intervention needed
+```
+
+### **4. Batch Processing**
+```
+Loop workflow with different topics
+→ Run via API in script
+→ Collect results
+→ Process in bulk
+```
+
+---
+
+## **What's NOT Included**
+
+- ❌ Cloud LLM APIs (by design - fully local)
+- ❌ Real web search (using mock data - can be added)
+- ❌ Persistent database (using in-memory dict)
+- ❌ Authentication (local dev only)
+- ❌ External MCP servers (using simplified local tools)
+
+---
+
+## **Future Enhancements**
+
+- [ ] Swap dict storage for Redis/PostgreSQL
+- [ ] Add real web search API (Tavily, SerpAPI)
+- [ ] Implement real MCP server (if needed)
+- [ ] Add multi-user support with auth
+- [ ] Webhook notifications for completed tasks
+- [ ] Advanced scheduling (cron expressions)
+- [ ] Workflow templates/presets
+- [ ] Model A/B testing
+- [ ] Cost tracking per workflow
+
+---
+
+## **Support & Debugging**
+
+### **Enable Debug Logging**
+
+Edit `.env`:
+```
+LOG_LEVEL=DEBUG
+```
+
+Restart FastAPI to see detailed logs.
+
+### **Check Ollama Status**
+
+```powershell
+# List models
+ollama list
+
+# Test LLM
+ollama run mistral "Say hello"
+
+# Check API
+curl http://localhost:11434/api/tags
+```
+
+### **View API Docs**
+
+FastAPI auto-generates docs:
+```
+http://localhost:8000/docs
+```
+
+Browse all endpoints interactively.
+
+---
+
+## **License**
+
+MIT - Free to use, modify, and distribute.
+
+---
+
+## **Summary**
+
+✅ **100% Local AI Workflow Platform**
+✅ **Multi-Agent Orchestration** (Researcher → Writer → Reviewer → Coordinator)
+✅ **REST API** for programmatic access
+✅ **Web Dashboard** for visual control
+✅ **Daily Automation** via scheduling
+✅ **Zero Dependencies** on cloud services
+✅ **Easy Setup** (pip install + ollama pull)
+✅ **Extensible** (add custom agents, tools, models)
+
+**Ready to use. Fully documented. Enjoy!** 🚀
