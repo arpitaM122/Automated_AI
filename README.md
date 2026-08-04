@@ -192,6 +192,21 @@ http://localhost:8000/docs
 
 ---
 
+## 🖥️ Screenshots
+
+### 🏠 Dasboard1
+
+![AI Workflow Automation Home](home.png)
+
+### 📊 Dashboard2
+
+![AI Workflow Automation Dashboard](home1.png)
+
+### 📊 Dashboard3
+
+![AI Workflow Automation Dashboard](home2.png)
+
+
 # 🔄 Workflow
 
 ```text
